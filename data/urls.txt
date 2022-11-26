@@ -1,0 +1,4 @@
+https://downloads.psl.noaa.gov//Datasets/ncep.reanalysis/Dailies/pressure/shum.2008.nc
+https://downloads.psl.noaa.gov//Datasets/ncep.reanalysis/Dailies/pressure/uwnd.2008.nc
+https://downloads.psl.noaa.gov//Datasets/ncep.reanalysis/Dailies/pressure/vwnd.2008.nc
+https://downloads.psl.noaa.gov//Datasets/ncep.reanalysis/Dailies/surface/pres.sfc.2008.nc

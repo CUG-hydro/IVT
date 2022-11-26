@@ -25,32 +25,37 @@
 ;   from their Web site at https://www.esrl.noaa.gov/psd/
 ;===================================================================
 
-  ptop = 300              ; 'shum' upper level
-  ptop@units = "hPa"
-  g    = 9.80665          ; m/s2
+; """
+; Arguments:
+; - `ptop`:
+; - `date`: 
+; - files:
+; - `indir`:
+; + `f_q`: 
+; + `f_u`: 
+; + `f_v`: 
+; + `f_ps`: 
+; """
+load "main_pkgs.ncl"
 
-  date  = 20080715        ; NH summer
+ptop = 300              ; 'shum' upper level
+ptop@units = "hPa"
+g    = 9.80665          ; m/s2
+date  = 20080715        ; NH summer
 
 ;---ESRL: CDC data
+diri = "data/"
+f_u = diri+"uwnd.2008.nc"
+f_v = diri+"vwnd.2008.nc"
+f_q = diri+"shum.2008.nc"   ; daily data for current year [366 days]
+f_ps= diri+"pres.sfc.2008.nc"
 
-  diri = "./"
-  filq = "shum.2008.nc"   ; daily data for current year [366 days]
-  filu = "uwnd.2008.nc"
-  filv = "vwnd.2008.nc"
-  filps= "pres.sfc.2008.nc"
-
-  pthu = diri+filu
-  pthv = diri+filv
-  pthq = diri+filq
-  pthps= diri+filps
-
-  fu   = addfile(pthu ,"r")
-  fv   = addfile(pthv ,"r")
-  fq   = addfile(pthq ,"r")
-  fps  = addfile(pthps,"r")
+fu   = addfile(f_u ,"r")
+fv   = addfile(f_v ,"r")
+fq   = addfile(f_q ,"r")
+fps  = addfile(f_ps,"r")
 
 ;---Time
-
   ymd  = cd_calendar(fu->time, -2)    ; ymd[*]: human readable
   nt   = ind(ymd.eq.date)             ; date for plotting and testing
 
@@ -58,50 +63,46 @@ TEST = True
 if (.not.TEST) then                   ; all times
   u    = fu->uwnd(:,{1000:ptop},:,:)  ; m/s, (time,level,lat,lon)
   v    = fv->vwnd(:,{1000:ptop},:,:)
-  q    = fq->shum                     ; [kg/kg], 1000-300 levels only
+  q    = fq->shum(:,{1000:ptop},:,:)  ; [kg/kg], 1000-300 levels only
   ps   = fps->pres                    ; Pa=>[kg/(m-s2)], (time,lat,lon)
-
 else                                  ; one time step; keep time dimension [ nt:nt: ]
-  u    = fu->uwnd(nt,{1000:ptop},:,:); m/s, (time,level,lat,lon)
-  v    = fv->vwnd(nt,{1000:ptop},:,:)
-  q    = fq->shum(nt,:,:,:)        ; [kg/kg], 1000-300 levels only
-  ps   = fps->pres(nt,:,:)         ; Pa=>[kg/(m-s2)], (time,lat,lon)
+  ; ncl没有简便的写法
+  ; indt = (/nt/)
+  ; u2 = fu->uwnd(indt,{1000:ptop},:,:); m/s, (time,level,lat,lon)  
+  u    = fu->uwnd(nt:nt,{1000:ptop},:,:); m/s, (time,level,lat,lon)
+  v    = fv->vwnd(nt:nt,{1000:ptop},:,:)
+  q    = fq->shum(nt:nt,{1000:ptop},:,:)        ; [kg/kg], 1000-300 levels only
+  ps   = fps->pres(nt:nt,:,:)         ; Pa=>[kg/(m-s2)], (time,lat,lon)
   nt   := 0                            ; only one time step
 end if
 
 ;---Vertical levels
+ptop = ptop*100
+ptop@units = "Pa"
 
-  ptop = ptop*100
-  ptop@units = "Pa"
-
-  plev = q&level                      ; hPa
-  plev = plev*100                     ; [100000,...,30000] Pa [kg/(m-s2)]
-  plev@units = "Pa"
-
+plev = q&level                      ; hPa
+plev = plev*100                     ; [100000,...,30000] Pa [kg/(m-s2)]
+plev@units = "Pa"
 ;---Change [kg/kg] to [g/kg]; not necessary: but common units for q
-
-  q    = q*1000
-  q@units = "g/kg"
-
+q    = q*1000
+q@units = "g/kg"
 ;---Divergence function [used later] requires S->N grid order
-
-  u    = u(:,:,::-1,:)
-  v    = v(:,:,::-1,:)
-  q    = q(:,:,::-1,:)
-  ps   =ps(:,  ::-1,:)
+u    = u(:,:,::-1,:)
+v    = v(:,:,::-1,:)
+q    = q(:,:,::-1,:)
+ps   =ps(:,  ::-1,:)
 
 ;---Layer thickness: ; Pa=>[kg/(m-s2)], (time,level,lat,lon)
 ;---Mass weighting:  (dp/g) => [Pa/(m/s2)] => (Pa-s2)/m => [kg/(m-s2)][s2/m] =>  (kg/m2)
 ;---Reference: http://www.cgd.ucar.edu/cas/catalog/newbudgets/
-
   dp   = dpres_plevel_Wrap(plev, ps, ptop, 0) ; Pa; layar thickness
-
+  ; printVarSummary(dp)
+  ; print(dp&plev/100)
   dpg  = dp/g
   dpg@long_name = "Layer Mass Weighting"
   dpg@units     = "kg/m2"                     ; dp/g, Pa/(m s-2), reduce to kg m-2
 
 ;---Moisture flux components at each pressure level
-
   uq   = u*q                                  ; (:,:,:,:)
   uq@long_name = "Zonal Moisture Flux [uq]"
   uq@units = "["+u@units+"]["+q@units+"]"     ; [m/s][g/kg]
@@ -112,50 +113,38 @@ end if
   vq@units = "["+v@units+"]["+q@units+"]"
   copy_VarCoords(v,vq)                        ; (time,level,lat,lon)
 
-PRINT_RAW = True
+; PRINT_RAW = True
+PRINT_RAW = False
 if (PRINT_RAW) then
-  printVarSummary(q)                          ; (time,level,lat,lon); g/kg
-  printMinMax(q,0)
-  print("-----")
-  printVarSummary(u)                          ; (time,level,lat,lon); m/s
-  printMinMax(u,0)
-  print("-----")
-  printVarSummary(v)
-  printMinMax(v,0)
-  print("-----")
-  printVarSummary(ps)                         ; (time,lat,lon); Pa => kg/(m-s2)
-  printMinMax(ps,0)
-  print("-----")
-  printVarSummary(uq)                         ; (time,level,lat,lon); (m/s)(g/kg)
-  printMinMax(uq,0)
-  print("-----")
-  printVarSummary(vq)
-  printMinMax(vq,0)
-  print("-----")
-  printVarSummary(dp)                         ; (time,level,lat,lon); Pa => kg/(m-s2)
-  printMinMax(dp,0)
-  print("-----")
-                                ; examine layer thickness at selected locations
+  print_var(q, "q")  ; (time,level,lat,lon); g/kg
+  print_var(u, "u")  ; (time,level,lat,lon); m/s
+  print_var(v, "v")  ; 
+  print_var(ps, "ps"); (time,lat,lon); Pa => kg/(m-s2)
+  print_var(uq, "uq"); (time,level,lat,lon); (m/s)(g/kg)
+  print_var(vq, "vq"); 
+  print_var(vq, "dp"); (time,level,lat,lon); Pa => kg/(m-s2)
+
+  ; examine layer thickness at selected locations
   print(dp(nt,:,{40},{180}))    ; mid-Pacific
   print(dp(nt,:,{40},{255}))    ; Boulder, CO
   print("-----")
 end if
 
 ;---Integrated mass weighted moisture flux components
-
-  uq_dpg = uq*dpg                ; mass weighted 'uq'; [m/s][g/kg][kg/m2]=>[m/s][g/kg]
+  unit_ivq = "[g m-1 s-1]"
+  uq_dpg = uq*dpg                ; mass weighted 'uq'; [m/s][g/kg][kg/m2]=>[m/s][g/m2]=>[g m-1 s-1]
   iuq    = dim_sum_n(uq_dpg, 1)
   iuq@long_name = "Integrated Zonal UQ [uq*dpg]"
   iuq@LONG_NAME = "Sum: Mass Weighted Integrated Zonal Moisture Flux [uq*dpg]"
-  iuq@units     = "[m/s][g/kg]"
+  iuq@units     = unit_ivq
   copy_VarCoords(u(:,0,:,:), iuq); (time,lat,lon)
   delete(uq_dpg)
 
-  vq_dpg = vq*dpg                ; mass weighted 'vq'; [m/s][g/kg][kg/m2]=>[m/s][g/kg]
+  vq_dpg = vq*dpg                ; mass weighted 'vq'; [m/s][g/kg][kg/m2]=>[m/s][g/m2]=>[g m-1 s-1]
   ivq    = dim_sum_n(vq_dpg, 1)
   ivq@long_name = "Integrated Meridional VQ [vq*dpg]"
   ivq@LONG_NAME = "Sum: Mass Weighted Integrated Meridional Moisture Flux [vq*dpg]"
-  ivq@units     = "[m/s][g/kg]"
+  ivq@units     = unit_ivq
   copy_VarCoords(v(:,0,:,:), ivq); (time,lat,lon)
   delete(vq_dpg)
 
@@ -179,43 +168,6 @@ end if
   VIMFC = -VIMFC           ; Note the preceding -1 [negative precedes integration]
   VIMFC@long_name = "VIMFC"
 
-;---Another way to compute Integrated divergence of moisture flux [iduvq_1]
-
-;;IDUVQ = wgt_vertical_n(duvq, dp, 2, 1)
-;;iduvq_0 = IDUVQ[0]
-;;iduvq_0 = iduvq_0/g                    ; complete mass weighting
-;;iduvq_0@long_name = "Average Mass Weighted MFC"
-;;iduvq_0@LONG_NAME = "Average Mass Weighted Moisture Flux Convergence"
-;;iduvq_0@units     = "g/(m2-s)"
-
-;;iduvq_1 = IDUVQ[1]                     ; same as iuvq_sum
-;;iduvq_1 = iduvq_1/g
-;;iduvq_1@long_name = "Integrated MFC"
-;;iduvq_1@LONG_NAME = "Integrated Moisture Flux Convergence"
-;;iduvq_1@units     = "g/(m2-s)"
-
-PRINT_RESULT = True
-if (PRINT_RESULT) then
-    printVarSummary(iuq)                 ; (time,lat,lon)
-    printMinMax(iuq,0)
-    print("-----")
-    printVarSummary(ivq)                 ; (time,lat,lon)
-    printMinMax(ivq,0)
-    print("-----")
-    printVarSummary(duvq)                ; (time,lev,lat,lon)
-    printMinMax(duvq,0)
-    print("-----")
-    printVarSummary(iduvq)               ; (time,lat,lon)
-    printMinMax(iduvq,0)
-    print("-----")
-;;  printVarSummary(iduvq_0)             ; (time,lat,lon)
-;;  printMinMax(iduvq_0,0)
-;;  print("-----")
-;;  printVarSummary(iduvq_1)             ; (time,lat,lon)
-;;  printMinMax(iduvq_1,0)
-;;  print("-----")
-end if
-
 ;*************************************************
 ; Calculate divergence: Use Wrap to include meta data
 ; Calculate divergent wind components; used for graphics
@@ -233,24 +185,10 @@ end if
   vd@long_name  = "Meridional Divergent Wind"
   vd@units      = v@units
 
-if (PRINT_RESULT) then
-    printVarSummary(ud)                 ; (time,level,lat,lon)
-    printMinMax(ud,0)
-    print("-----")
-    printVarSummary(vd)                 ; (time,level,lat,lon)
-    printMinMax(vd,0)
-    print("-----")
-end if
-
-
-
-
-
-
-
 ;*************************************************
 ; plot results
 ;*************************************************
+fout = "mfc_div"
 
   scl5  = 1e5                                  ; arbitrary: used for nicer plot values
   sclab5= "(10~S~-5~N~)"                       ; used later
@@ -261,8 +199,8 @@ end if
   SCLAB6= "(10~S~6~N~)"
 
   plot := new(2,graphic)
-
-  wks   = gsn_open_wks("png","mfc_div")        ; send graphics to PNG file
+  wks   = gsn_open_wks("pdf", fout)        ; send graphics to PNG file
+  ; wks   = gsn_open_wks("png","mfc_div")        ; send graphics to PNG file
   resd                 = True
   resd@cnFillOn        = True                  ; color
   resd@cnLinesOn       = False                 ; turn off contour lines
@@ -283,24 +221,7 @@ end if
   resd@gsnLeftString   = "Divergent Wind"
   resd@gsnScalarContour= True                  ; vectors over contours
 
-  ; 2022-10-20
-  ; China broder
-  resd@mpMinLatF             = 5.
-  resd@mpMaxLatF             = 55.
-  resd@mpMinLonF             = 72.
-  resd@mpMaxLonF             = 155.
-  resd@mpDataBaseVersion     = "MediumRes" ; or "Ncarg4_1"
-  resd@mpDataSetName         = "NCL-Chinamap/database/Earth..4"
-  resd@mpAreaMaskingOn       = True
-  resd@mpMaskAreaSpecifiers  = (/"China"/)
-  resd@mpOutlineOn           = True         ; Turn on map outlines
-  resd@mpOutlineSpecifiers   = (/"China","China:Provinces"/)
-  fill_specs                 = (/"water","land"/)
-  resd@mpFillAreaSpecifiers  = fill_specs
-  resd@mpSpecifiedFillColors = (/0,0/)
-  resd@mpFillDrawOrder       = "PostDraw"
-
-
+  add_china(resd)
 
   LEVP = 700
   DIV  = div(nt,{LEVP},:,:)                     ; keep meta data
@@ -312,7 +233,6 @@ end if
   dplt = gsn_csm_vector_scalar_map(wks,ud(nt,{LEVP},:,:),vd(nt,{LEVP},:,:),DIV,resd)
 
 ;--- Moisture Transport [uq, vq] at a specified pressure level
-
   res                   = True             ; plot mods desired
   res@gsnDraw           = False            ; don't draw yet
   res@gsnFrame          = False            ; don't advance frame yet
@@ -328,24 +248,8 @@ end if
   res@cnMaxLevelValF       =  140.0        ; max level
   res@cnMinLevelValF       = -res@cnMaxLevelValF     ; min level
   res@cnLevelSpacingF      =   10.0        ; contour interval
-
-  ; 2022-10-20
-  ; China broder
-  res@mpMinLatF             = 5.
-  res@mpMaxLatF             = 55.
-  res@mpMinLonF             = 72.
-  res@mpMaxLonF             = 155.
-  res@mpDataBaseVersion     = "MediumRes" ; or "Ncarg4_1"
-  res@mpDataSetName         = "NCL-Chinamap/database/Earth..4"
-  res@mpAreaMaskingOn       = True
-  res@mpMaskAreaSpecifiers  = (/"China"/)
-  res@mpOutlineOn           = True         ; Turn on map outlines
-  res@mpOutlineSpecifiers   = (/"China","China:Provinces"/)
-  fill_specs                 = (/"water","land"/)
-  res@mpFillAreaSpecifiers  = fill_specs
-  res@mpSpecifiedFillColors = (/0,0/)
-
-
+  ; add china boundary
+  add_china(res)
 
   LEVP    = 700
   res@gsnCenterString      = LEVP+"hPa"
@@ -358,29 +262,11 @@ end if
   gsn_panel(wks,plot,(/2,1/),resP)               ; now draw as one plot
 
 ;--- Integrated Moisture Transport [iuq, ivq]
-
   delete(res@gsnCenterString)              ; not used for this plot
   res@cnMaxLevelValF       = 10.0          ; min level
   res@cnMinLevelValF       = -res@cnMaxLevelValF     ; min level
   res@cnLevelSpacingF      =  0.5          ; contour interval
-
-  ; 2022-10-20
-  ; China broder
-  res@mpMinLatF             = 5.
-  res@mpMaxLatF             = 55.
-  res@mpMinLonF             = 72.
-  res@mpMaxLonF             = 155.
-  res@mpDataBaseVersion     = "MediumRes" ; or "Ncarg4_1"
-  res@mpDataSetName         = "NCL-Chinamap/database/Earth..4"
-  res@mpAreaMaskingOn       = True
-  res@mpMaskAreaSpecifiers  = (/"China"/)
-  res@mpOutlineOn           = True         ; Turn on map outlines
-  res@mpOutlineSpecifiers   = (/"China","China:Provinces"/)
-  fill_specs                 = (/"water","land"/)
-  res@mpFillAreaSpecifiers  = fill_specs
-  res@mpSpecifiedFillColors = (/0,0/)
-
-
+  ; add_china(res)
 
   IUQ     = iuq(nt,:,:)                    ; local array: keep meta data
   IUQ     = IUQ/scl5                       ; scale for plot
@@ -390,26 +276,7 @@ end if
   IVQ     = ivq(nt,:,:)                    ; local array: keep meta data
   IVQ     = IVQ/scl5
   res@gsnRightString  = SCLAB5+" "+ivq@units
-
-
-  
-  ; 2022-10-20
-  ; China broder
-  res@mpMinLatF             = 5.
-  res@mpMaxLatF             = 55.
-  res@mpMinLonF             = 72.
-  res@mpMaxLonF             = 155.
-  res@mpDataBaseVersion     = "MediumRes" ; or "Ncarg4_1"
-  res@mpDataSetName         = "NCL-Chinamap/database/Earth..4"
-  res@mpAreaMaskingOn       = True
-  res@mpMaskAreaSpecifiers  = (/"China"/)
-  res@mpOutlineOn           = True         ; Turn on map outlines
-  res@mpOutlineSpecifiers   = (/"China","China:Provinces"/)
-  fill_specs                 = (/"water","land"/)
-  res@mpFillAreaSpecifiers  = fill_specs
-  res@mpSpecifiedFillColors = (/0,0/)
-
-
+  ; add_china(res)
   plot(1) = gsn_csm_contour_map(wks,IVQ,res)
 
   resP@gsnPanelMainString  = date+": Mass Wgt. Component Moisture Flux"
@@ -418,7 +285,6 @@ end if
   delete( [/IUQ, IVQ/] )                   ; no longer needed
 
 ;---Divergence of Moisture Flux
-
   res@cnMaxLevelValF       = 100.0          ; min level
   res@cnMinLevelValF       = -res@cnMaxLevelValF     ; min level
   res@cnLevelSpacingF      =  5.0          ; contour interval
@@ -428,22 +294,7 @@ end if
   DUVQ    = DUVQ*scl6                              ; scale for plot
   res@gsnCenterString = LEVP+"hPa"
   res@gsnRightString  = sclab6+" "+duvq@units
-
-  ; 2022-10-20
-  ; China broder
-  res@mpMinLatF             = 5.
-  res@mpMaxLatF             = 55.
-  res@mpMinLonF             = 72.
-  res@mpMaxLonF             = 155.
-  res@mpDataBaseVersion     = "MediumRes" ; or "Ncarg4_1"
-  res@mpDataSetName         = "NCL-Chinamap/database/Earth..4"
-  res@mpAreaMaskingOn       = True
-  res@mpMaskAreaSpecifiers  = (/"China"/)
-  res@mpOutlineOn           = True         ; Turn on map outlines
-  res@mpOutlineSpecifiers   = (/"China","China:Provinces"/)
-  fill_specs                 = (/"water","land"/)
-  res@mpFillAreaSpecifiers  = fill_specs
-  res@mpSpecifiedFillColors = (/0,0/)
+  ; add_china(res)
 
   plot(0) = gsn_csm_contour_map(wks,DUVQ,res)
 
@@ -452,26 +303,7 @@ end if
   DUVQ    = DUVQ*scl6
   res@gsnCenterString = LEVP+"hPa"
   res@gsnRightString  = sclab6+" "+duvq@units
-
-
-  ; 2022-10-20
-  ; China broder
-  res@mpMinLatF             = 5.
-  res@mpMaxLatF             = 55.
-  res@mpMinLonF             = 72.
-  res@mpMaxLonF             = 155.
-  res@mpDataBaseVersion     = "MediumRes" ; or "Ncarg4_1"
-  res@mpDataSetName         = "NCL-Chinamap/database/Earth..4"
-  res@mpAreaMaskingOn       = True
-  res@mpMaskAreaSpecifiers  = (/"China"/)
-  res@mpOutlineOn           = True         ; Turn on map outlines
-  res@mpOutlineSpecifiers   = (/"China","China:Provinces"/)
-  fill_specs                 = (/"water","land"/)
-  res@mpFillAreaSpecifiers  = fill_specs
-  res@mpSpecifiedFillColors = (/0,0/)
-
-
-
+  ; add_china(res)
   plot(1) = gsn_csm_contour_map(wks,DUVQ,res)
 
   resP@gsnPanelMainString  = date+": Divergence of Moisture Flux"
@@ -481,34 +313,13 @@ end if
   delete([/res@gsnCenterString, res@gsnRightString/]) ; not used in next plot
 
 ;---Integrated Divergence of Moisture Flux Convergence [no scaling]
-
   res@gsnDraw              = True
   res@gsnFrame             = True
   res@lbLabelBarOn         = True
-
  ;res@cnFillPalette        = "cmp_flux"
   res@cnMaxLevelValF       =  0.50                ; min level
   res@cnMinLevelValF       = -res@cnMaxLevelValF  ; min level
   res@cnLevelSpacingF      =  0.050               ; contour interval
   res@tiMainString         = date+": VIMFC"
-
-
-  ; 2022-10-20
-  ; China broder
-  res@mpMinLatF             = 5.
-  res@mpMaxLatF             = 55.
-  res@mpMinLonF             = 72.
-  res@mpMaxLonF             = 155.
-  res@mpDataBaseVersion     = "MediumRes" ; or "Ncarg4_1"
-  res@mpDataSetName         = "NCL-Chinamap/database/Earth..4"
-  res@mpAreaMaskingOn       = True
-  res@mpMaskAreaSpecifiers  = (/"China"/)
-  res@mpOutlineOn           = True         ; Turn on map outlines
-  res@mpOutlineSpecifiers   = (/"China","China:Provinces"/)
-  fill_specs                 = (/"water","land"/)
-  res@mpFillAreaSpecifiers  = fill_specs
-  res@mpSpecifiedFillColors = (/0,0/)
-
-
-
+  ; add_china(res)
   plt = gsn_csm_contour_map(wks,VIMFC(nt,:,:) ,res)

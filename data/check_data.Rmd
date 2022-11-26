@@ -1,0 +1,13 @@
+```{r}
+library(nctools)
+library(Ipaper)
+```
+
+```{r}
+fs = dir2("data", "*.nc", recursive = FALSE)
+fs
+```
+
+```{r}
+map(fs, nc_date)
+```
