@@ -81,20 +81,22 @@ begin
   vq@units = "["+v@units+"]["+q@units+"]" 
   copy_VarCoords(v,vq)                        ; (time,level,lat,lon)
 
-  ;---Integrated mass weighted moisture flux components
+  ; uq*dpg = [m/s][g/kg][kg/m2]=>[m/s][g/m2] = [g m-1 s-1]
+  unit_ivt = "g/(m-s)"
+  ;---Integrated mass weighted moisture flux components  
   uq_dpg = uq*dpg                ; mass weighted 'uq'; [m/s][g/kg][kg/m2]=>[m/s][g/kg]
   iuq    = dim_sum_n(uq_dpg, 1)
   iuq@long_name = "Integrated Zonal UQ [uq*dpg]" 
   iuq@LONG_NAME = "Sum: Mass Weighted Integrated Zonal Moisture Flux [uq*dpg]" 
-  iuq@units     = "[m/s][g/kg]"
+  iuq@units     = unit_ivt
   copy_VarCoords(u(:,0,:,:), iuq); (time,lat,lon)
   delete(uq_dpg)
 
-  vq_dpg = vq*dpg                ; mass weighted 'vq'; [m/s][g/kg][kg/m2]=>[m/s][g/kg] 
+  vq_dpg = vq*dpg                ; mass weighted 'vq'; 
   ivq    = dim_sum_n(vq_dpg, 1)
   ivq@long_name = "Integrated Meridional VQ [vq*dpg]" 
   ivq@LONG_NAME = "Sum: Mass Weighted Integrated Meridional Moisture Flux [vq*dpg]" 
-  ivq@units     = "[m/s][g/kg]"
+  ivq@units     = unit_ivt; "[m/s][g/kg]"
   copy_VarCoords(v(:,0,:,:), ivq); (time,lat,lon)
   delete(vq_dpg)
 
@@ -115,7 +117,7 @@ begin
 
   VIMFC =  iduvq           ; keep meta data                         
   VIMFC = -VIMFC           ; Note the preceding -1 [negative precedes integration] 
-  VIMFC@long_name = "VIMFC"
+  VIMFC@long_name = "Integrated Moisture Flux Convergence"
 
   ;*************************************************
   ; Calculate divergence: Use Wrap to include meta data
