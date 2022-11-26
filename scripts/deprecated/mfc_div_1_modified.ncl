@@ -36,7 +36,7 @@
 ; + `f_v`: 
 ; + `f_ps`: 
 ; """
-load "main_pkgs.ncl"
+load "src/main_IVT.ncl"
 
 ptop = 300              ; 'shum' upper level
 ptop@units = "hPa"

@@ -1,3 +1,28 @@
+; global functions
+; load "main_pkgs.ncl"
+
+undef("make_var")
+function make_var(x, units)
+begin
+  x@units = units
+  return(x)
+end
+
+
+procedure print_var(x, name)
+begin
+  print("[" + name + "]" + "-----")
+  printVarSummary(x)                          ; (time,level,lat,lon); m/s
+  printMinMax(x,0)
+  print("-----")
+end
+
+
+procedure print_line()
+begin
+  print("[--------------------------------------------------------------------")
+end
+
 ; notes:
 ; 1. q&level in the unit of hPa
 ; 2. the right most dimension should be `lat`, `lon`
@@ -5,11 +30,17 @@
 undef("hPa2Pa")
 function hPa2Pa(x)
 begin
-  
 end
 
+; N = 1 kg·m/s²
+; 气压的单位：P = F/A = 1 kg·m-1·s-2
+
+; , outfile, debug
+; Arguments
+; - ptop: hPa
+; - ps: Pa
 undef("cal_IVT")
-function cal_IVT(u, v, q, ps, ptop, outfile, debug)
+function cal_IVT(u, v, q, ps, ptop, fout)
 begin
   ; CONSTANTS
   g    = 9.80665          ; m/s2
@@ -18,9 +49,18 @@ begin
   q    = q*1000
   q@units = "g/kg"
   
+  ptop = ptop*100
+  ptop@units = "Pa"
+
   plev = q&level                      ; hPa  
   plev = plev*100                     ; [100000,...,30000] Pa [kg/(m-s2)]
   plev@units = "Pa"
+
+  ;---Divergence function [used later] requires S->N grid order
+  u    = u(:,:,::-1,:)
+  v    = v(:,:,::-1,:)
+  q    = q(:,:,::-1,:)
+  ps   =ps(:,  ::-1,:)
 
   ;---Layer thickness: ; Pa=>[kg/(m-s2)], (time,level,lat,lon) 
   ;---Mass weighting:  (dp/g) => [Pa/(m/s2)] => (Pa-s2)/m => [kg/(m-s2)][s2/m] =>  (kg/m2)
@@ -41,7 +81,6 @@ begin
   vq@units = "["+v@units+"]["+q@units+"]" 
   copy_VarCoords(v,vq)                        ; (time,level,lat,lon)
 
-
   ;---Integrated mass weighted moisture flux components
   uq_dpg = uq*dpg                ; mass weighted 'uq'; [m/s][g/kg][kg/m2]=>[m/s][g/kg]
   iuq    = dim_sum_n(uq_dpg, 1)
@@ -60,7 +99,6 @@ begin
   delete(vq_dpg)
 
   ;---Divergence of moisture flux: uv2dvF => global 'fixed' rectilinear grid
-
   duvq  = uv2dvF_Wrap(uq, vq)    ; (time,level,lat,lon)
   duvq@long_name = "Divergence of Moisture Flux"
   duvq@units     = "g/(kg-s)"    ; (1/m)*[(m/s)(g/kg)] => [g/(kg-s)]
@@ -79,7 +117,6 @@ begin
   VIMFC = -VIMFC           ; Note the preceding -1 [negative precedes integration] 
   VIMFC@long_name = "VIMFC"
 
-  
   ;*************************************************
   ; Calculate divergence: Use Wrap to include meta data
   ; Calculate divergent wind components; used for graphics 
@@ -98,15 +135,32 @@ begin
   vd@units      = v@units
 
   ; ## save data to nefcdf
-  system("rm -rf IVT.nc")
-  fout = addfile("IVT.nc","c")
-  fout->uq = uq
-  fout->vq = vq
-  fout->iuq = iuq
-  fout->ivq = ivq
-  fout->duvq = duvq
-  fout->VIMFC = VIMFC
-  fout->ud = ud
-  fout->vd = vd
-  delete(fout)
+  system("rm -rf " + fout)
+  fid = addfile(fout, "c")
+  fid->uq = uq
+  fid->vq = vq
+  fid->iuq = iuq
+  fid->ivq = ivq
+  fid->duvq = duvq
+  fid->VIMFC = VIMFC
+  fid->ud = ud
+  fid->vd = vd
+  fid->div = div
+  ; delete(fid)
+  return fid
+  ; res = True
+  ; res@uq = uq
+  ; res@vq = vq
+  ; res@iuq = iuq
+  ; res@ivq = ivq
+  ; res@duvq = duvq
+  ; res@VIMFC = VIMFC
+  ; res@ud = ud
+  ; res@vd = vd
+  ; res@div = div
+  ; printVarSummary(div)
+  ; print("-------------")
+  ; return(res)
 end
+
+load "src/main_vis.ncl"

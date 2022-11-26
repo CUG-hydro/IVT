@@ -1,10 +1,5 @@
 ;*************************************************
-; mfc_div_1.ncl
-;
 ; Concepts illustrated:
-;   - Read daily mean wind components, humidity and sfc. pressure
-;     from different files
-;   - Reorder the input (N==>S) grid order to (S==>N) via NCL syntax  ::-1
 ;   - Calculate mass weightined layer thickness [units="kg/m2"]
 ;   - Calculate moisture flux [uq, vq]
 ;   - Calculate moisture flux divergence using spherical harmonics
@@ -24,7 +19,7 @@
 ; + `f_v`: 
 ; + `f_ps`: 
 ; """
-load "main_pkgs.ncl"
+load "src/main_IVT.ncl"
 
 ptop = 300              ; 'shum' upper level
 ptop@units = "hPa"
@@ -72,7 +67,7 @@ fid = cal_IVT(u, v, q, ps, ptop, fout)
 ;*************************************************
 ; plot results
 ;*************************************************
-fout = "Figure2_test"
+fout = "Figure_IVT&DIV"
 
 scl5  = 1e5                                  ; arbitrary: used for nicer plot values
 sclab5= "(10~S~-5~N~)"                       ; used later

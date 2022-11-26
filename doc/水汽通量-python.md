@@ -48,9 +48,3 @@ def cal_ivt(q, u, v, lon, lat, lev, surf_pres=None):
 
     return iqu, iqv
 ```
-
-
-
-# NCL
-
-https://www.ncl.ucar.edu/Applications/wind.shtml
