@@ -1,6 +1,7 @@
 ```{r}
 library(nctools)
 library(Ipaper)
+library(terra)
 ```
 
 ```{r}
@@ -15,5 +16,7 @@ ncread(fs[4], "level")
 ```
 
 ```{r}
-map(fs, nc_date)
+r = rast(fs[4])
+plot(r[[1]]*1e3)
+# map(fs, nc_date)
 ```

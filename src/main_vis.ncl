@@ -33,10 +33,10 @@ begin
 end
 
 undef("plot_div")
-function plot_div(res)
+function plot_div()
 begin
   ; wks   = gsn_open_wks("png","mfc_div")        ; send graphics to PNG file
-  ; res                 = True
+  res                 = True
   res@cnFillOn        = True                  ; color
   res@cnLinesOn       = False                 ; turn off contour lines
 

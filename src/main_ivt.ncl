@@ -1,5 +1,20 @@
 ; global functions
 ; load "main_pkgs.ncl"
+undef("ten_pown")
+function ten_pown(n)
+begin
+  return "(10~S~"+n+"~N~)"                       ; used later
+end
+
+undef("uv2speed")
+function uv2speed(u, v)
+begin
+  speed = sqrt(u^2 + v^2)
+  speed@units = u@units
+  ; speed@long_name = "Speed" 
+  copy_VarCoords(u, speed); (time,lat,lon)
+  return speed;
+end
 
 undef("make_var")
 function make_var(x, units)
@@ -60,7 +75,7 @@ begin
   u    = u(:,:,::-1,:)
   v    = v(:,:,::-1,:)
   q    = q(:,:,::-1,:)
-  ps   =ps(:,  ::-1,:)
+  ps   = ps(:, ::-1,:)
 
   ;---Layer thickness: ; Pa=>[kg/(m-s2)], (time,level,lat,lon) 
   ;---Mass weighting:  (dp/g) => [Pa/(m/s2)] => (Pa-s2)/m => [kg/(m-s2)][s2/m] =>  (kg/m2)
@@ -100,6 +115,11 @@ begin
   copy_VarCoords(v(:,0,:,:), ivq); (time,lat,lon)
   delete(vq_dpg)
 
+  ivt = sqrt(ivq^2 + ivq^2)
+  ivt@units = unit_ivt
+  ivt@long_name = "Integrated Moisture Flux [IVT]" 
+  copy_VarCoords(ivq, ivt); (time,lat,lon)
+
   ;---Divergence of moisture flux: uv2dvF => global 'fixed' rectilinear grid
   duvq  = uv2dvF_Wrap(uq, vq)    ; (time,level,lat,lon)
   duvq@long_name = "Divergence of Moisture Flux"
@@ -109,15 +129,15 @@ begin
 
   duvq_dpg = duvq*dpg            ;  [g/(kg-s)][kg/m2] => [g/(m2-s)]
   iduvq    = dim_sum_n(duvq_dpg, 1)
-  iduvq@long_name = "Integrated Mass Wgt MFC" 
-  iduvq@LONG_NAME = "Integrated Mass Weighted Moisture Flux Convergence" 
+  iduvq@long_name = "Integrated Mass Wgt MFD" 
+  iduvq@LONG_NAME = "Integrated Mass Weighted Moisture Flux Divergence" 
   iduvq@units     = "g/(m2-s)"
   copy_VarCoords(u(:,0,:,:), iduvq)      ; (time,lat,lon)
   delete(duvq_dpg)
 
   VIMFC =  iduvq           ; keep meta data                         
-  VIMFC = -VIMFC           ; Note the preceding -1 [negative precedes integration] 
-  VIMFC@long_name = "Integrated Moisture Flux Convergence"
+  ; VIMFC = -VIMFC           ; Note the preceding -1 [negative precedes integration] 
+  VIMFC@long_name = "Integrated Moisture Flux Divergence"
 
   ;*************************************************
   ; Calculate divergence: Use Wrap to include meta data
@@ -139,15 +159,16 @@ begin
   ; ## save data to nefcdf
   system("rm -rf " + fout)
   fid = addfile(fout, "c")
-  fid->uq = uq
-  fid->vq = vq
-  fid->iuq = iuq
-  fid->ivq = ivq
-  fid->duvq = duvq
+  fid->uq    = uq ; [ntime, nlev, nlon, nlat]
+  fid->vq    = vq
+  fid->iuq   = iuq
+  fid->ivq   = ivq
+  fid->ivt   = ivt
+  fid->duvq  = duvq
   fid->VIMFC = VIMFC
-  fid->ud = ud
-  fid->vd = vd
-  fid->div = div
+  fid->ud    = ud
+  fid->vd    = vd
+  fid->div   = div
   ; delete(fid)
   return fid
   ; res = True

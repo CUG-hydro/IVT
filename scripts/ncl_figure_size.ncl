@@ -1,24 +1,3 @@
-;*************************************************
-; Concepts illustrated:
-;   - Calculate mass weightined layer thickness [units="kg/m2"]
-;   - Calculate moisture flux [uq, vq]
-;   - Calculate moisture flux divergence using spherical harmonics
-;   - Integrate the moisture flux divergence using mass weighting
-;   - Plot a number of quantities
-;*************************************************
-;---Calculate the Horizontal Moisture Flux Convergence [MFC]
-
-; """
-; Arguments:
-; - `ptop`:
-; - `date`: 
-; - files:
-; - `indir`:
-; + `f_q`: 
-; + `f_u`: 
-; + `f_v`: 
-; + `f_ps`: 
-; """
 load "src/main_IVT.ncl"
 
 ptop = 300              ; 'shum' upper level
