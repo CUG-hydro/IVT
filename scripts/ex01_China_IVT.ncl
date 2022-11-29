@@ -25,7 +25,11 @@ ptop = 300              ; 'shum' upper level
 ptop@units = "hPa"
 
 date  = 20080715        ; NH summer
-date  = 20211005        ; NH summer
+date  = 20211001        ; NH summer
+date  = 20211002        ; NH summer
+date  = 20211003        ; NH summer
+; date  = 20211004        ; NH summer
+; date  = 20211005        ; NH summer
 
 ;---ESRL: CDC data
 diri = "data/"
@@ -86,11 +90,9 @@ ud = fid->ud
 uq = fid->uq
 
 ; printVarSummary(div)
-DIV  = div(nt,{LEVP},:,:)                     ; keep meta data
-DIV  = DIV*scl6                               ; nicer numbers
 
 
-plot := new(2,graphic)
+plot := new(3,graphic)
 ; wks_type@wkPaperSize = "A4"
 wks_type = "pdf"
 wks_type@wkPaperWidthF  = 12  ; in inches
@@ -98,13 +100,34 @@ wks_type@wkPaperHeightF = 8  ; in inches
 wks   = gsn_open_wks(wks_type, fout)        ; send graphics to PNG file
 
 ; Figure1: divergent wind
-resd = plot_div()
-resd@tiMainString    = "Divergence and Divergent Winds"
-resd@gsnCenterString = LEVP+"hPa: "+date
-resd@gsnRightString  = sclab6+" "+div@units
-dplt = gsn_csm_vector_scalar_map(wks, ud(nt,{LEVP},:,:), vd(nt,{LEVP},:,:), DIV, resd)
-; delete(fid)
+; res                 = True
+resd = plot_div(True)
+resd@gsnDraw  = False 
+resd@gsnFrame = False                          ; don't advance frame
 
+procedure plot_div_wind(LEVP, i)
+begin
+  DIV  = div(nt,{LEVP},:,:)                     ; keep meta data
+  DIV  = DIV*scl6                               ; nicer numbers
+
+  resd@gsnCenterString = LEVP+"hPa"
+  resd@gsnRightString  = sclab6+" "+fid->duvq@units
+  plot(i) = gsn_csm_vector_scalar_map(wks, ud(nt,{LEVP},:,:), vd(nt,{LEVP},:,:), DIV, resd)
+  ; return p
+end
+
+plot_div_wind(850, 0)
+plot_div_wind(500, 1)
+plot_div_wind(300, 2)
+
+resP = True
+resP@gsnPanelMainString = "Divergence and Divergent Winds: " + date
+gsn_panel(wks, plot,(/2,2/), resP)               ; now draw as one plot
+
+; resd@gsnCenterString = LEVP+"hPa: "+date
+; resd@gsnRightString  = sclab6+" "+div@units
+; plot(0) = 
+; delete(fid)
 
 
 ; Figure2: Moisture Transport [uq, vq] at a specified pressure level
@@ -114,10 +137,10 @@ res@gsnCenterString      = LEVP+"hPa"
 plot(0) = gsn_csm_contour_map(wks,fid->uq(nt,{LEVP},:,:),res)
 plot(1) = gsn_csm_contour_map(wks,fid->vq(nt,{LEVP},:,:),res)
 
-resP                     = True                ; modify the panel plot
+resP                     := True                ; modify the panel plot
 resP@gsnPanelMainString  = date+": Unweighted Moisture Flux Components"
 resP@gsnPanelLabelBar    = True                ; add common colorbar
-gsn_panel(wks,plot,(/1,2/),resP)               ; now draw as one plot
+gsn_panel(wks, plot(0:1),(/1,2/),resP)               ; now draw as one plot
 
 
 ;Figure3: Integrated Moisture Transport [iuq, ivq]
@@ -137,7 +160,7 @@ IVQ     = IVQ/scl5
 plot(1) = gsn_csm_contour_map(wks,IVQ,res)
 
 resP@gsnPanelMainString  = date+": Mass Wgt. Component Moisture Flux"
-gsn_panel(wks,plot,(/1,2/),resP)               ; now draw as one plot
+gsn_panel(wks,plot(0:1),(/1,2/),resP)               ; now draw as one plot
 
 delete( [/IUQ, IVQ/] )                   ; no longer needed
 
@@ -173,21 +196,21 @@ gsn_panel(wks,plot,(/2,2/),resP)                ; now draw as one plot
 ; Figure5: ---Integrated Divergence of Moisture Flux Convergence [no scaling]
 delete([/res@gsnCenterString, res@gsnRightString/]) ; not used in next plot
 
-; res@gsnDraw              = True
-; res@gsnFrame             = True
-; res@lbLabelBarOn         = True
-; ;res@cnFillPalette        = "cmp_flux"
-; res@cnMaxLevelValF       =  0.50                ; min level
-; res@cnMinLevelValF       = -res@cnMaxLevelValF  ; min level
-; res@cnLevelSpacingF      =  0.050               ; contour interval
-; res@tiMainString         = date+": VIMFC"
-; plt = gsn_csm_contour_map(wks,fid->VIMFC(nt,:,:) ,res)
+res@gsnDraw              = True
+res@gsnFrame             = True
+res@lbLabelBarOn         = True
+;res@cnFillPalette        = "cmp_flux"
+res@cnMaxLevelValF       =  0.50                ; min level
+res@cnMinLevelValF       = -res@cnMaxLevelValF  ; min level
+res@cnLevelSpacingF      =  0.050               ; contour interval
+res@tiMainString         = date+": VIMFC"
+plt = gsn_csm_contour_map(wks,fid->VIMFC(nt,:,:) ,res)
 
-printVarSummary(fid)
+; printVarSummary(fid)
 
-resd = plot_div()
-resd@tiMainString    = "Integrated Moisture Flux Convergence and IVT wind"
-resd@gsnCenterString = LEVP+"hPa: "+date
-resd@gsnRightString  = sclab6+" "+div@units
-dplt = gsn_csm_vector_scalar_map(wks, fid->iuq(nt,:,:), fid->ivq(nt,:,:), \
-  fid->VIMFC(nt,:,:), resd)
+; resd = plot_div()
+; resd@tiMainString    = "Integrated Moisture Flux Convergence and IVT wind"
+; resd@gsnCenterString = LEVP+"hPa: "+date
+; resd@gsnRightString  = sclab6+" "+div@units
+; dplt = gsn_csm_vector_scalar_map(wks, fid->iuq(nt,:,:), fid->ivq(nt,:,:), \
+;   fid->VIMFC(nt,:,:), resd)

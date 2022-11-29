@@ -1,0 +1,26 @@
+```{r}
+library(Ipaper)
+library(ggplot2)
+library(metR)
+library(terra)
+```
+
+```{r}
+r = rast("IVT.nc")
+r
+varnames(r)
+```
+
+```{r}
+vars = c("iuq", "ivq", "VIMFC")
+var_pattern = paste(vars, collapse = "|")
+map(vars, ~r[.x])
+d = r[var_pattern] %>% as.data.frame(xy = TRUE) %>% as.data.table()
+```
+
+```{r}
+ggplot(d, aes(x, y)) +
+  geom_streamline(aes(dx = iuq, dy = ivq)) + 
+  scale_mag()
+  # geom_rast()
+```

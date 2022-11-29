@@ -5,4 +5,6 @@
 https://downloads.psl.noaa.gov//Datasets/ncep.reanalysis/Dailies/pressure/shum.2021.nc
 https://downloads.psl.noaa.gov//Datasets/ncep.reanalysis/Dailies/pressure/uwnd.2021.nc
 https://downloads.psl.noaa.gov//Datasets/ncep.reanalysis/Dailies/pressure/vwnd.2021.nc
+https://downloads.psl.noaa.gov/Datasets/ncep.reanalysis/Dailies/pressure/hgt.2021.nc
 https://downloads.psl.noaa.gov//Datasets/ncep.reanalysis/Dailies/surface/pres.sfc.2021.nc
+https://downloads.psl.noaa.gov//Datasets/ncep.reanalysis/Dailies/surface_gauss/prate.sfc.gauss.2021.nc

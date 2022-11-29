@@ -4,8 +4,14 @@ library(Ipaper)
 ```
 
 ```{r}
-fs = dir2("data", "*.nc", recursive = FALSE)
+fs = dir2("data", "*.2021.nc$", recursive = FALSE)
 fs
+```
+```{r}
+ncread(fs[2], "level")
+ncread(fs[3], "level")
+ncread(fs[4], "level")
+# ncinfo(fs[3])
 ```
 
 ```{r}
