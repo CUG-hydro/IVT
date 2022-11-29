@@ -7,9 +7,11 @@ date  = 20080715        ; NH summer
 date  = 20211001        ; NH summer
 date  = 20211002        ; NH summer
 date  = 20211003        ; NH summer
-; date  = 20211004        ; NH summer
-; date  = 20211005        ; NH summer
-date  = 20210721        ; NH summer
+date  = 20211004        ; NH summer
+
+date  = 20211005        ; NH summer
+
+; date  = 20210721        ; NH summer
 
 ;---ESRL: CDC data
 diri = "data/"
